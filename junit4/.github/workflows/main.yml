@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - '*'
+
+permissions:
+  contents: read #  to fetch code (actions/checkout)
+
+jobs:
+
+  build-and-verify:
+    name: Build and verify (JDK ${{ matrix.java }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['8', '11', '17', '21', '25']
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Download Maven # Download with default JDK because OpenJDK 6 does not support TLS 1.2
+        run: ./mvnw --version
+      - name: Set up JDK
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: temurin
+          cache: maven
+      - name: Build and verify
+        run: ./mvnw verify javadoc:javadoc site:site --batch-mode --errors --settings .github/workflows/settings.xml
+
+  publish-snapshots:
+    name: Publish snapshot artifacts
+    if: github.event_name == 'push' && github.repository == 'junit-team/junit4' && github.ref == 'refs/heads/main'
+    needs: build-and-verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Download Maven # Download with default JDK because OpenJDK 6 does not support TLS 1.2
+        run: ./mvnw --version
+      - name: Set up JDK
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          java-version: 8
+          distribution: temurin
+          cache: maven
+      - name: Publish snapshot artifacts
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+        run: ./mvnw deploy --batch-mode --errors --activate-profiles generate-docs --settings .github/workflows/settings.xml
