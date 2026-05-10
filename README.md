@@ -1,5 +1,4 @@
 # Software Re-Engineering Final Project
-**Roll Number:** 22F3635 Hashim Ali  
 **Project:** Legacy Hospital Management System Re-Engineering
 
 This repository contains the full re-engineering pipeline for a legacy hospital system, including code smell analysis of JUnit 4 and a normalized database migration.
